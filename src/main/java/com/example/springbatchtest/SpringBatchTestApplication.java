@@ -25,6 +25,28 @@ public class SpringBatchTestApplication {
 	public StepBuilderFactory stepBuilderFactory;
 
 	@Bean
+	public Step givePackageToCustomerStep(){
+		return this.stepBuilderFactory.get("givePackageToCustomerStep").tasklet(new Tasklet() {
+			@Override
+			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+				System.out.println("Given the package to the customer");
+				return RepeatStatus.FINISHED;
+			}
+		}).build();
+	}
+
+	@Bean
+	public Step driveToAdressStep(){
+		return this.stepBuilderFactory.get("driveToAddressStep").tasklet(new Tasklet() {
+			@Override
+			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+				System.out.println("Successfully arrived at the address");
+				return RepeatStatus.FINISHED;
+			}
+		}).build();
+	}
+
+	@Bean
 	public Step packageItemStep() {
 		return this.stepBuilderFactory.get("packageItemStep").tasklet(new Tasklet() {
 			@Override
@@ -40,7 +62,11 @@ public class SpringBatchTestApplication {
 
 	@Bean
 	public Job deliverPackageJob(){
-		return this.jobBuilderFactory.get("deliverPackageJob").start(packageItemStep()).build();
+		return this.jobBuilderFactory.get("deliverPackageJob")
+				.start(packageItemStep())
+				.next(driveToAdressStep())
+				.next(givePackageToCustomerStep())
+				.build();
 	}
 
 	public static void main(String[] args) {
