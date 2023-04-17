@@ -5,6 +5,9 @@
 2. java -jar spring-batch-test-0.0.1-SNAPSHOT.jar "item=shoes" "run.date(date)=2023/04/17"
 
 ### branch -> set-job-sequence
+1. ./scripts/run.sh
+
+### branch -> exceptions-in-steps
 1. toggle boolean value in SpringBatchTestApplication - line 40
 2. GOT_LOST = true (exception)
 2. In scripts/run.sh -> (put same params for testing)
