@@ -5,4 +5,6 @@
 2. java -jar spring-batch-test-0.0.1-SNAPSHOT.jar "item=shoes" "run.date(date)=2023/04/17"
 
 ### branch -> set-job-sequence
-1. ./scripts/run.sh
+1. toggle boolean value in SpringBatchTestApplication - line 40
+2. ./scripts/run.sh
+(job execution stops at the steps with exceptions)
