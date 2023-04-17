@@ -12,6 +12,11 @@ repositories {
 	mavenCentral()
 }
 
+jar {
+	archiveBaseName = 'spring-batch-test-jar'
+	archiveVersion =  '0.1.0'
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-batch'
 //	runtimeOnly 'com.h2database:h2'
