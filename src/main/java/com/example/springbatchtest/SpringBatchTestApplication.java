@@ -37,9 +37,13 @@ public class SpringBatchTestApplication {
 
 	@Bean
 	public Step driveToAdressStep(){
+		boolean GOT_LOST = false;
 		return this.stepBuilderFactory.get("driveToAddressStep").tasklet(new Tasklet() {
 			@Override
 			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+				if(GOT_LOST){
+					throw new RuntimeException("Got lost driving to the address");
+				}
 				System.out.println("Successfully arrived at the address");
 				return RepeatStatus.FINISHED;
 			}
