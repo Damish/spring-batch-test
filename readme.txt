@@ -29,3 +29,8 @@
 7. ./scripts/run.sh
 >>> packageItemStep > driveToAdressStep > givePackageToCustomerStep
 
+### branch -> job-execution-decider
+(flow control with custom status)
+1. DeliveryDecider line 13 change "<" or ">"
+2. ./scripts/run.sh
+
