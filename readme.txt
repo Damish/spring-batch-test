@@ -40,3 +40,6 @@
 ### branch -> batch-status-control
 1. toggle boolean value in SpringBatchTestApplication - line 40
 2. ./scripts/run.sh
+
+### branch -> step-execution-listener
+1. ./scripts/run_flowers_job.sh
