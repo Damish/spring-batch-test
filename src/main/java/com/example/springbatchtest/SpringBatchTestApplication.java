@@ -124,7 +124,7 @@ public class SpringBatchTestApplication {
         return this.jobBuilderFactory.get("deliverPackageJob")
                 .start(packageItemStep())
                 .next(driveToAdressStep())
-                    .on("FAILED").to(storePackageStep())
+                    .on("FAILED").fail()
                 .from(driveToAdressStep())
                     .on("*").to(deliveryDecider())
                         .on("PRESENT").to((givePackageToCustomerStep()))
