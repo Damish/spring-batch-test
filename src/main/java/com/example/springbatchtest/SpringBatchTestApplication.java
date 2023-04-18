@@ -26,8 +26,35 @@ public class SpringBatchTestApplication {
     public StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public JobExecutionDecider decider() {
+    public JobExecutionDecider deliveryDecider() {
         return new DeliveryDecider();
+    }
+
+    @Bean
+    public JobExecutionDecider receiptDecider() {
+        return new ReceiptDecider();
+    }
+
+    @Bean
+    public Step thankCustomerStep() {
+        return this.stepBuilderFactory.get("thankCustomerStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Thank Customer");
+                return RepeatStatus.FINISHED;
+            }
+        }).build();
+    }
+
+    @Bean
+    public Step refundStep() {
+        return this.stepBuilderFactory.get("refundStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Giving customer refund");
+                return RepeatStatus.FINISHED;
+            }
+        }).build();
     }
 
     @Bean
@@ -97,12 +124,14 @@ public class SpringBatchTestApplication {
         return this.jobBuilderFactory.get("deliverPackageJob")
                 .start(packageItemStep())
                 .next(driveToAdressStep())
-                .on("FAILED").to(storePackageStep())
+                    .on("FAILED").to(storePackageStep())
                 .from(driveToAdressStep())
-                .on("*").to(decider())
-                .on("PRESENT").to((givePackageToCustomerStep()))
-                .from(decider())
-                .on("NOT_PRESENT").to((leaveAtDoorStep()))
+                    .on("*").to(deliveryDecider())
+                        .on("PRESENT").to((givePackageToCustomerStep()))
+                            .next(receiptDecider()).on("CORRECT").to(thankCustomerStep())
+                            .from(receiptDecider()).on("INCORRECT").to(refundStep())
+                    .from(deliveryDecider())
+                        .on("NOT_PRESENT").to((leaveAtDoorStep()))
                 .end()
                 .build();
     }

@@ -34,3 +34,5 @@
 1. DeliveryDecider line 13 change "<" or ">"
 2. ./scripts/run.sh
 
+### branch -> conditional-flow-exercise
+2. ./scripts/run.sh
