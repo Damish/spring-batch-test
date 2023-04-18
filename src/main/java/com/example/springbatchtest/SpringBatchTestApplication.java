@@ -3,6 +3,7 @@ package com.example.springbatchtest;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -33,6 +34,55 @@ public class SpringBatchTestApplication {
     @Bean
     public JobExecutionDecider receiptDecider() {
         return new ReceiptDecider();
+    }
+
+    @Bean
+    public StepExecutionListener selectFlowerListener(){
+        return new FlowersSelectionStepExecutionListener();
+    }
+
+    @Bean
+    public Step selectFLowersStep() {
+        return this.stepBuilderFactory.get("selectFLowersStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Gathering flowers for order");
+                return RepeatStatus.FINISHED;
+            }
+        }).listener(selectFlowerListener()).build();
+    }
+
+    @Bean
+    public Step removeThronesStep() {
+        return this.stepBuilderFactory.get("removeThronesStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Remove thrones form roses");
+                return RepeatStatus.FINISHED;
+            }
+        }).build();
+    }
+
+    @Bean
+    public Step arrangeFLowersStep() {
+        return this.stepBuilderFactory.get("arrangeFLowersStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Arranging flowers for order");
+                return RepeatStatus.FINISHED;
+            }
+        }).build();
+    }
+
+    @Bean
+    public Job prepareFlowers(){
+        return this.jobBuilderFactory.get("prepareFlowersJob")
+                .start(selectFLowersStep())
+                    .on("TRIM_REQUIRED").to(removeThronesStep()).next(arrangeFLowersStep())
+                .from(selectFLowersStep())
+                    .on("NO_TRIM_REQUIRED").to(arrangeFLowersStep())
+                .end()
+                .build();
     }
 
     @Bean
