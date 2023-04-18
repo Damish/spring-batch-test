@@ -35,4 +35,8 @@
 2. ./scripts/run.sh
 
 ### branch -> conditional-flow-exercise
+1. ./scripts/run.sh
+
+### branch -> batch-status-control
+1. toggle boolean value in SpringBatchTestApplication - line 40
 2. ./scripts/run.sh
