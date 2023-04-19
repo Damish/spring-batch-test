@@ -60,6 +60,27 @@ public class SpringBatchTestApplication {
     }
 
     @Bean
+    public Step nestedBillingJobStep(){
+        return this.stepBuilderFactory.get("nestedBillingJobStep").job(billingJob()).build();
+    }
+
+    @Bean
+    public Step sendInvoiceStep() {
+        return this.stepBuilderFactory.get("invoiceStep").tasklet(new Tasklet() {
+            @Override
+            public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+                System.out.println("Invoice is send to the customer");
+                return RepeatStatus.FINISHED;
+            }
+        }).build();
+    }
+
+    @Bean
+    public Job billingJob(){
+        return jobBuilderFactory.get("billingJob").start(sendInvoiceStep()).build();
+    }
+
+    @Bean
     public Step selectFLowersStep() {
         return this.stepBuilderFactory.get("selectFLowersStep").tasklet(new Tasklet() {
             @Override
@@ -194,6 +215,7 @@ public class SpringBatchTestApplication {
         return this.jobBuilderFactory.get("deliverPackageJob")
                 .start(packageItemStep())
                 .on("*").to(deliveryFlow())
+                .next(nestedBillingJobStep())
                 .end()
                 .build();
     }
