@@ -42,4 +42,8 @@
 2. ./scripts/run.sh
 
 ### branch -> step-execution-listener
-1. ./scripts/run_flowers_job.sh
+1. ./scripts/run_flowers_job.sh roses
+
+### branch -> reusing-flows-in-jobs
+1. ./scripts/run.sh
+2. ./scripts/run_flowers_job.sh  roses

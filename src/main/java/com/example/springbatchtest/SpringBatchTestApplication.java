@@ -7,7 +7,10 @@ import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.job.builder.FlowBuilder;
+import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
+import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
@@ -37,6 +40,21 @@ public class SpringBatchTestApplication {
     }
 
     @Bean
+    public Flow deliveryFlow(){
+        return new FlowBuilder<SimpleFlow>("deliveryFlow")
+                .start(driveToAdressStep())
+                .on("FAILED").fail()
+                .from(driveToAdressStep())
+                .on("*").to(deliveryDecider())
+                .on("PRESENT").to((givePackageToCustomerStep()))
+                .next(receiptDecider()).on("CORRECT").to(thankCustomerStep())
+                .from(receiptDecider()).on("INCORRECT").to(refundStep())
+                .from(deliveryDecider())
+                .on("NOT_PRESENT").to((leaveAtDoorStep()))
+                .build();
+    }
+
+    @Bean
     public StepExecutionListener selectFlowerListener(){
         return new FlowersSelectionStepExecutionListener();
     }
@@ -57,7 +75,7 @@ public class SpringBatchTestApplication {
         return this.stepBuilderFactory.get("removeThronesStep").tasklet(new Tasklet() {
             @Override
             public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-                System.out.println("Remove thrones form roses");
+                System.out.println("Remove thrones from roses");
                 return RepeatStatus.FINISHED;
             }
         }).build();
@@ -81,6 +99,8 @@ public class SpringBatchTestApplication {
                     .on("TRIM_REQUIRED").to(removeThronesStep()).next(arrangeFLowersStep())
                 .from(selectFLowersStep())
                     .on("NO_TRIM_REQUIRED").to(arrangeFLowersStep())
+                .from(arrangeFLowersStep())
+                    .on("*").to(deliveryFlow())
                 .end()
                 .build();
     }
@@ -173,15 +193,7 @@ public class SpringBatchTestApplication {
     public Job deliverPackageJob() {
         return this.jobBuilderFactory.get("deliverPackageJob")
                 .start(packageItemStep())
-                .next(driveToAdressStep())
-                    .on("FAILED").fail()
-                .from(driveToAdressStep())
-                    .on("*").to(deliveryDecider())
-                        .on("PRESENT").to((givePackageToCustomerStep()))
-                            .next(receiptDecider()).on("CORRECT").to(thankCustomerStep())
-                            .from(receiptDecider()).on("INCORRECT").to(refundStep())
-                    .from(deliveryDecider())
-                        .on("NOT_PRESENT").to((leaveAtDoorStep()))
+                .on("*").to(deliveryFlow())
                 .end()
                 .build();
     }
