@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 @SpringBootApplication
 @EnableBatchProcessing
@@ -59,10 +60,12 @@ public class SpringBatchTestApplication {
         return new FlowersSelectionStepExecutionListener();
     }
 
+/*
     @Bean
     public Step nestedBillingJobStep(){
         return this.stepBuilderFactory.get("nestedBillingJobStep").job(billingJob()).build();
     }
+*/
 
     @Bean
     public Step sendInvoiceStep() {
@@ -76,8 +79,8 @@ public class SpringBatchTestApplication {
     }
 
     @Bean
-    public Job billingJob(){
-        return jobBuilderFactory.get("billingJob").start(sendInvoiceStep()).build();
+    public Flow billingFlow(){
+        return new FlowBuilder<SimpleFlow>("billingFlow").start(sendInvoiceStep()).build();
     }
 
     @Bean
@@ -214,8 +217,8 @@ public class SpringBatchTestApplication {
     public Job deliverPackageJob() {
         return this.jobBuilderFactory.get("deliverPackageJob")
                 .start(packageItemStep())
-                .on("*").to(deliveryFlow())
-                .next(nestedBillingJobStep())
+                .split(new SimpleAsyncTaskExecutor())
+                .add(deliveryFlow(),billingFlow())
                 .end()
                 .build();
     }

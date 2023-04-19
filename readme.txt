@@ -52,3 +52,8 @@
 ### branch -> nested-jobs-in-steps
 (running another job as part of step in one job)
 1. ./scripts/run.sh
+
+### branch -> parallel-job-flows-async
+(running two job flows in parallel within two threads-async)
+(SimpleAsyncTaskExecutor)
+1. ./scripts/run.sh
