@@ -45,5 +45,10 @@
 1. ./scripts/run_flowers_job.sh roses
 
 ### branch -> reusing-flows-in-jobs
+(define job flow and reuse in other jobs)
 1. ./scripts/run.sh
 2. ./scripts/run_flowers_job.sh  roses
+
+### branch -> nested-jobs-in-steps
+(running another job as part of step in one job)
+1. ./scripts/run.sh
