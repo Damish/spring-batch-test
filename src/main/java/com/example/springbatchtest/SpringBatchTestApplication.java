@@ -7,7 +7,9 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.PagingQueryProvider;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuilder;
 import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean;
@@ -39,6 +41,14 @@ public class SpringBatchTestApplication {
 			+ "email, cost, item_id, item_name, ship_date "
 			+ "from SHIPPED_ORDER order by order_id";
 
+	public static String INSERT_ORDER_SQL = "insert into "
+			+ "SHIPPED_ORDER_OUTPUT(order_id, first_name, last_name, email, item_id, item_name, cost, ship_date)"
+			+ " values(?,?,?,?,?,?,?,?)";
+
+	public static String INSERT_ORDER_SQL_NAMED = "insert into "
+			+ "SHIPPED_ORDER_OUTPUT(order_id, first_name, last_name, email, item_id, item_name, cost, ship_date)"
+			+ " values(:orderId,:firstName,:lastName,:email,:itemId,:itemName,:cost,:shipDate)";
+
 	@Autowired
 	public JobBuilderFactory jobBuilderFactory;
 
@@ -49,7 +59,7 @@ public class SpringBatchTestApplication {
 	public DataSource dataSource;
 
 	@Bean
-	public ItemWriter<Order> itemWriter() { // item writer to csv flat file
+	public ItemWriter<Order> flatFileItemWriter() { // item writer to csv flat file
 		FlatFileItemWriter<Order> itemWriter = new FlatFileItemWriter<>();
 		itemWriter.setResource(new FileSystemResource("shipped_orders_output.csv"));
 		DelimitedLineAggregator<Order> aggregator = new DelimitedLineAggregator<>();
@@ -60,6 +70,19 @@ public class SpringBatchTestApplication {
 
 		itemWriter.setLineAggregator(aggregator);
 		return itemWriter;
+	}
+
+	@Bean
+	public ItemWriter<Order> dbItemWriter() { // item writer to csv flat file
+		return new JdbcBatchItemWriterBuilder<Order>()
+				.dataSource(dataSource)
+				//--with prepared statements
+				//.sql(INSERT_ORDER_SQL)
+				//.itemPreparedStatementSetter(new OrderItemPreparedStatementSetter())
+				//--with bean mapped
+				.sql(INSERT_ORDER_SQL_NAMED)
+				.beanMapped()
+				.build();
 	}
 
 	@Bean
@@ -115,7 +138,7 @@ public class SpringBatchTestApplication {
 		return this.stepBuilderFactory.get("chunkBasedStep")
 				.<Order,Order>chunk(10)
 				.reader(pagingDbItemReader())
-				.writer(itemWriter())
+				.writer(dbItemWriter())
 				.build();
 	}
 
