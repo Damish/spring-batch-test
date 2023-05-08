@@ -7,12 +7,17 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.PagingQueryProvider;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuilder;
 import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -27,11 +32,22 @@ import java.util.List;
 @EnableBatchProcessing
 public class SpringBatchTestApplication {
 
+	public static String[] names = new String[] { "orderId", "firstName", "lastName", "email", "cost", "itemId",
+			"itemName", "shipDate" };
+
 	public static String[] tokens = new String[] {"order_id", "first_name", "last_name", "email", "cost", "item_id", "item_name", "ship_date"};
 
 	public static String ORDER_SQL = "select order_id, first_name, last_name, "
 			+ "email, cost, item_id, item_name, ship_date "
 			+ "from SHIPPED_ORDER order by order_id";
+
+	public static String INSERT_ORDER_SQL = "insert into "
+			+ "SHIPPED_ORDER_OUTPUT(order_id, first_name, last_name, email, item_id, item_name, cost, ship_date)"
+			+ " values(?,?,?,?,?,?,?,?)";
+
+	public static String INSERT_ORDER_SQL_NAMED = "insert into "
+			+ "SHIPPED_ORDER_OUTPUT(order_id, first_name, last_name, email, item_id, item_name, cost, ship_date)"
+			+ " values(:orderId,:firstName,:lastName,:email,:itemId,:itemName,:cost,:shipDate)";
 
 	@Autowired
 	public JobBuilderFactory jobBuilderFactory;
@@ -41,6 +57,33 @@ public class SpringBatchTestApplication {
 
 	@Autowired
 	public DataSource dataSource;
+
+	@Bean
+	public ItemWriter<Order> flatFileItemWriter() { // item writer to csv flat file
+		FlatFileItemWriter<Order> itemWriter = new FlatFileItemWriter<>();
+		itemWriter.setResource(new FileSystemResource("shipped_orders_output.csv"));
+		DelimitedLineAggregator<Order> aggregator = new DelimitedLineAggregator<>();
+		aggregator.setDelimiter(",");
+		BeanWrapperFieldExtractor<Order> fieldExtractor = new BeanWrapperFieldExtractor<>();
+		fieldExtractor.setNames(names);
+		aggregator.setFieldExtractor(fieldExtractor);
+
+		itemWriter.setLineAggregator(aggregator);
+		return itemWriter;
+	}
+
+	@Bean
+	public ItemWriter<Order> dbItemWriter() { // item writer to csv flat file
+		return new JdbcBatchItemWriterBuilder<Order>()
+				.dataSource(dataSource)
+				//--with prepared statements
+				//.sql(INSERT_ORDER_SQL)
+				//.itemPreparedStatementSetter(new OrderItemPreparedStatementSetter())
+				//--with bean mapped
+				.sql(INSERT_ORDER_SQL_NAMED)
+				.beanMapped()
+				.build();
+	}
 
 	@Bean
 	public ItemReader<Order> csvFileItemReader() {
@@ -95,13 +138,8 @@ public class SpringBatchTestApplication {
 		return this.stepBuilderFactory.get("chunkBasedStep")
 				.<Order,Order>chunk(10)
 				.reader(pagingDbItemReader())
-				.writer(new ItemWriter<Order>() {
-					@Override
-					public void write(List<? extends Order> items) throws Exception {
-						System.out.println(String.format("Received list of size: %s", items.size()));
-						items.forEach(System.out::println);
-					}
-				}).build();
+				.writer(dbItemWriter())
+				.build();
 	}
 
 	@Bean
