@@ -7,7 +7,10 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.PagingQueryProvider;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.batch.item.database.builder.JdbcPagingItemReaderBuilder;
+import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -67,11 +70,31 @@ public class SpringBatchTestApplication {
 				.build();
 	}
 
+	private PagingQueryProvider queryProvider() throws Exception {
+		SqlPagingQueryProviderFactoryBean factoryBean = new SqlPagingQueryProviderFactoryBean();
+		factoryBean.setSelectClause("select order_id, first_name, last_name, email, cost, item_id, item_name, ship_date ");
+		factoryBean.setFromClause("from SHIPPED_ORDER");
+		factoryBean.setSortKey("order_id");
+		factoryBean.setDataSource(dataSource);
+		return factoryBean.getObject();
+	}
+
 	@Bean
-	public Step chunkBasedStep() {
+	public ItemReader<Order> pagingDbItemReader() throws Exception {
+		return new JdbcPagingItemReaderBuilder<Order>()
+				.dataSource(dataSource)
+				.name("jdbcCursorItemReader")
+				.queryProvider(queryProvider())
+				.rowMapper(new OrderRowMapper())
+				.pageSize(10) // should march chunk size
+				.build();
+	}
+
+	@Bean
+	public Step chunkBasedStep() throws Exception {
 		return this.stepBuilderFactory.get("chunkBasedStep")
-				.<Order,Order>chunk(3)
-				.reader(dbItemReader())
+				.<Order,Order>chunk(10)
+				.reader(pagingDbItemReader())
 				.writer(new ItemWriter<Order>() {
 					@Override
 					public void write(List<? extends Order> items) throws Exception {
@@ -82,7 +105,7 @@ public class SpringBatchTestApplication {
 	}
 
 	@Bean
-	public Job job(){
+	public Job job() throws Exception {
 		return this.jobBuilderFactory.get("job")
 				.start(chunkBasedStep())
 				.build();
