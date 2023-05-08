@@ -19,6 +19,8 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
+import org.springframework.batch.item.json.builder.JsonFileItemWriterBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -73,7 +75,7 @@ public class SpringBatchTestApplication {
 	}
 
 	@Bean
-	public ItemWriter<Order> dbItemWriter() { // item writer to csv flat file
+	public ItemWriter<Order> dbItemWriter() { // item writer to database
 		return new JdbcBatchItemWriterBuilder<Order>()
 				.dataSource(dataSource)
 				//--with prepared statements
@@ -82,6 +84,15 @@ public class SpringBatchTestApplication {
 				//--with bean mapped
 				.sql(INSERT_ORDER_SQL_NAMED)
 				.beanMapped()
+				.build();
+	}
+
+	@Bean
+	public ItemWriter<Order> JsonItemWriter() { // item writer to Json file
+		return new JsonFileItemWriterBuilder<Order>()
+				.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<Order>())
+				.resource(new FileSystemResource("shipped_orders_output_json.json"))
+				.name("JsonItemWriter")
 				.build();
 	}
 
@@ -138,7 +149,7 @@ public class SpringBatchTestApplication {
 		return this.stepBuilderFactory.get("chunkBasedStep")
 				.<Order,Order>chunk(10)
 				.reader(pagingDbItemReader())
-				.writer(dbItemWriter())
+				.writer(JsonItemWriter())
 				.build();
 	}
 
