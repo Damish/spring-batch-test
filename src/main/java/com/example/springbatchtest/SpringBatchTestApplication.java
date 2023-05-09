@@ -5,9 +5,9 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.PagingQueryProvider;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.FileSystemResource;
 
 import javax.sql.DataSource;
-import java.util.List;
 
 @SpringBootApplication
 @EnableBatchProcessing
@@ -61,6 +60,11 @@ public class SpringBatchTestApplication {
 	public DataSource dataSource;
 
 	@Bean
+	public ItemProcessor<Order,TrackedOrder> trackedOrderItemProcessor() {
+		return new TrackedOrderItemProcessor();
+	}
+
+	@Bean
 	public ItemWriter<Order> flatFileItemWriter() { // item writer to csv flat file
 		FlatFileItemWriter<Order> itemWriter = new FlatFileItemWriter<>();
 		itemWriter.setResource(new FileSystemResource("shipped_orders_output.csv"));
@@ -88,9 +92,9 @@ public class SpringBatchTestApplication {
 	}
 
 	@Bean
-	public ItemWriter<Order> JsonItemWriter() { // item writer to Json file
-		return new JsonFileItemWriterBuilder<Order>()
-				.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<Order>())
+	public ItemWriter<TrackedOrder> JsonItemWriter() { // item writer to Json file
+		return new JsonFileItemWriterBuilder<TrackedOrder>()
+				.jsonObjectMarshaller(new JacksonJsonObjectMarshaller<TrackedOrder>())
 				.resource(new FileSystemResource("shipped_orders_output_json.json"))
 				.name("JsonItemWriter")
 				.build();
@@ -147,8 +151,9 @@ public class SpringBatchTestApplication {
 	@Bean
 	public Step chunkBasedStep() throws Exception {
 		return this.stepBuilderFactory.get("chunkBasedStep")
-				.<Order,Order>chunk(10)
+				.<Order,TrackedOrder>chunk(10)
 				.reader(pagingDbItemReader())
+				.processor(trackedOrderItemProcessor())
 				.writer(JsonItemWriter())
 				.build();
 	}
