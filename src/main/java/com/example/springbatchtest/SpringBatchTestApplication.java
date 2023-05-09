@@ -168,6 +168,10 @@ public class SpringBatchTestApplication {
 				.<Order,TrackedOrder>chunk(10)
 				.reader(pagingDbItemReader())
 				.processor(compositeItemProcessor())
+				.faultTolerant()
+				.skip(OrderProcessingException.class)
+				.skipLimit(50)
+				.listener(new CustomSkipListener())
 				.writer(JsonItemWriter())
 				.build();
 	}
