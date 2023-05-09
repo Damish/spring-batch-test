@@ -21,6 +21,8 @@ import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
 import org.springframework.batch.item.json.builder.JsonFileItemWriterBuilder;
+import org.springframework.batch.item.support.CompositeItemProcessor;
+import org.springframework.batch.item.support.builder.CompositeItemProcessorBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -60,8 +62,20 @@ public class SpringBatchTestApplication {
 	public DataSource dataSource;
 
 	@Bean
+	public ItemProcessor<TrackedOrder,TrackedOrder> freeShippingItemProcessor() {
+		return new FreeShippingItemProcessor();
+	}
+
+	@Bean
 	public ItemProcessor<Order,TrackedOrder> trackedOrderItemProcessor() {
 		return new TrackedOrderItemProcessor();
+	}
+
+	@Bean
+	public ItemProcessor<Order,TrackedOrder> compositeItemProcessor() {
+		return new CompositeItemProcessorBuilder<Order,TrackedOrder>()
+				.delegates(trackedOrderItemProcessor(),freeShippingItemProcessor())
+				.build();
 	}
 
 	@Bean
@@ -153,7 +167,7 @@ public class SpringBatchTestApplication {
 		return this.stepBuilderFactory.get("chunkBasedStep")
 				.<Order,TrackedOrder>chunk(10)
 				.reader(pagingDbItemReader())
-				.processor(trackedOrderItemProcessor())
+				.processor(compositeItemProcessor())
 				.writer(JsonItemWriter())
 				.build();
 	}
