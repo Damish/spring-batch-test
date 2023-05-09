@@ -169,9 +169,12 @@ public class SpringBatchTestApplication {
 				.reader(pagingDbItemReader())
 				.processor(compositeItemProcessor())
 				.faultTolerant()
-				.skip(OrderProcessingException.class)
-				.skipLimit(50)
-				.listener(new CustomSkipListener())
+				.retry(OrderProcessingException.class)
+				.retryLimit(3)
+				.listener(new CustomRetryListener())
+				//.skip(OrderProcessingException.class)
+				//.skipLimit(50)
+				//.listener(new CustomSkipListener())
 				.writer(JsonItemWriter())
 				.build();
 	}
